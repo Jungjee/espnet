@@ -65,6 +65,7 @@ L3DAS22=
 LIBRIMIX=downloads
 LIBRITTS=
 LJSPEECH=downloads
+LT_SPEECH_CMD=downloads
 MUSAN=
 MUST_C=downloads
 NSC=

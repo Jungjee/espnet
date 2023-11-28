@@ -41,8 +41,8 @@ def main(args):
         if len(enroll.size()) == 1:
             enroll = enroll.unsqueeze(0)
             test = enroll.unsqueeze(0)
-        score = torch.cdist(enroll, test)
-        score = -1.0 * torch.mean(score)
+        score = torch.mm(enroll, test.T)
+        score = torch.mean(score)
         scores.append(score.item())
 
     if not os.path.exists(os.path.dirname(out_dir)):

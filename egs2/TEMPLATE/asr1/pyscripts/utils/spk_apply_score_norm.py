@@ -81,13 +81,13 @@ def main(args):
             tst = to_device(org_embds[tst], "cuda" if ngpu > 0 else "cpu")
             score = float(score)
 
-            e_c = -1.0 * torch.cdist(enr, cohort_embds).mean(0)
+            e_c = torch.mm(enr, cohort_embds.T).mean(0)
             e_c = torch.topk(e_c, k=cfg["adaptive_cohort_size"])[0]
 
             e_c_m = torch.mean(e_c)
             e_c_s = torch.std(e_c)
 
-            t_c = -1.0 * torch.cdist(tst, cohort_embds).mean(0)
+            t_c = torch.mm(tst, cohort_embds.T).mean(0)
             t_c = torch.topk(t_c, k=cfg["adaptive_cohort_size"])[0]
 
             t_c_m = torch.mean(t_c)

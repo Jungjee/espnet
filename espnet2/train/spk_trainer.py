@@ -155,8 +155,8 @@ class SpkTrainer(Trainer):
 
             for _utt_id in utt_id:
                 _utt_id_1, _utt_id_2 = _utt_id.split("*")
-                score = torch.cdist(spk_embd_dic[_utt_id_1], spk_embd_dic[_utt_id_2])
-                score = -1.0 * torch.mean(score)
+                score = torch.mm(spk_embd_dic[_utt_id_1], spk_embd_dic[_utt_id_2].T)
+                score = torch.mean(score)
                 scores.append(score.view(1))  # 0-dim to 1-dim tensor for cat
             labels.append(batch["spk_labels"])
 

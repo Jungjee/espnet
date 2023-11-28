@@ -28,6 +28,11 @@ from espnet2.spk.loss.aamsoftmax_subcenter_intertopk import (
 from espnet2.spk.loss.abs_loss import AbsLoss
 from espnet2.spk.pooling.abs_pooling import AbsPooling
 from espnet2.spk.pooling.chn_attn_stat_pooling import ChnAttnStatPooling
+from espnet2.spk.pooling.conditional_chn_attn_stat_pooling import (
+    ConditionalChnAttnStatPooling,
+)
+from espnet2.spk.pooling.transformer_decoder_pooling import TransformerDecoderPooling
+from espnet2.spk.pooling.transformer_decoder_stats_pooling import TransformerDecoderStatsPooling
 from espnet2.spk.projector.abs_projector import AbsProjector
 from espnet2.spk.projector.rawnet3_projector import RawNet3Projector
 from espnet2.tasks.abs_task import AbsTask
@@ -93,6 +98,9 @@ pooling_choices = ClassChoices(
     name="pooling",
     classes=dict(
         chn_attn_stat=ChnAttnStatPooling,
+        cond_chn_attn_stat=ConditionalChnAttnStatPooling,
+        transformer_decoder=TransformerDecoderPooling,
+        transformer_stats_decoder=TransformerDecoderStatsPooling,
     ),
     type_check=AbsPooling,
     default="chn_attn_stat",

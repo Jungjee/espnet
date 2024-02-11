@@ -377,7 +377,8 @@ class Reporter:
             raise KeyError(f"{key}.{key2} is not found: {self.get_all_keys()}")
 
         # iterate from the last epoch
-        values = [(e, self.stats[e][key][key2]) for e in self.stats]
+        #values = [(e, self.stats[e][key][key2]) for e in self.stats]
+        values = [(e, self.stats[e][key][key2]) for e in self.stats if hasattr(self.stats[e], key)]
 
         if mode == "min":
             values = sorted(values, key=lambda x: x[1])

@@ -313,15 +313,14 @@ class Trainer:
                     distributed_option=distributed_option,
                 )
 
-            if iepoch % 10 == 0:
-                with reporter.observe("valid") as sub_reporter:
-                    cls.validate_one_epoch(
-                        model=dp_model,
-                        iterator=valid_iter_factory.build_iter(iepoch),
-                        reporter=sub_reporter,
-                        options=trainer_options,
-                        distributed_option=distributed_option,
-                    )
+            with reporter.observe("valid") as sub_reporter:
+                cls.validate_one_epoch(
+                    model=dp_model,
+                    iterator=valid_iter_factory.build_iter(iepoch),
+                    reporter=sub_reporter,
+                    options=trainer_options,
+                    distributed_option=distributed_option,
+                )
             if not distributed_option.distributed or distributed_option.dist_rank == 0:
                 # att_plot doesn't support distributed
                 if plot_attention_iter_factory is not None:
@@ -355,8 +354,7 @@ class Trainer:
                     reporter.matplotlib_plot(output_dir / "images")
                 if train_summary_writer is not None:
                     reporter.tensorboard_add_scalar(train_summary_writer, key1="train")
-                    if iepoch % 10 == 0:
-                        reporter.tensorboard_add_scalar(valid_summary_writer, key1="valid")
+                    reporter.tensorboard_add_scalar(valid_summary_writer, key1="valid")
                 if trainer_options.use_wandb:
                     reporter.wandb_log()
 

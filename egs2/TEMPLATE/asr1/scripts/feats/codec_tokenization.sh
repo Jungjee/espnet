@@ -30,11 +30,13 @@ src_dir=
 tgt_dir=
 checkpoint_path=null
 config_path=null
+hf_model_tag=null
 
 log "$0 $*"
 . utils/parse_options.sh
 
 . ./path.sh
+. ./cmd.sh
 
 if [ $# -ne 0 ]; then
     echo "Usage: $0 --src_dir <src_dir> --tgt_dir <tgt_dir> --file_name wav.scp --codec_choice DAC"
@@ -80,6 +82,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
             --wav_wspecifier ${wav_wspecifier} \
             --checkpoint_path ${checkpoint_path} \
             --config_path ${config_path} \
+            --hf_model_tag ${hf_model_tag} \
             "scp:${_logdir}/${file_name}.JOB.scp" ${code_wspecifier} || exit 1;
 
     for n in $(seq ${_nj}); do

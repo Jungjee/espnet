@@ -7,13 +7,13 @@ import argparse
 import logging
 import os
 import sys
+import time
 
 import kaldiio
-import numpy as np
 import torch
 
 from espnet2.speechlm.tokenizer.codec_tokenizer import CodecTokenizer
-from espnet2.utils.types import str2bool
+from espnet2.utils.types import str2bool, str_or_none
 from espnet.nets.pytorch_backend.nets_utils import pad_list
 
 logging.basicConfig(
@@ -42,15 +42,21 @@ def get_parser():
     )
     parser.add_argument(
         "--checkpoint_path",
-        type=str,
+        type=str_or_none,
         default=None,
         help="checkpoint path for Espnet (and potentially other) codec model",
     )
     parser.add_argument(
         "--config_path",
-        type=str,
+        type=str_or_none,
         default=None,
         help="config path for Espnet (and potentially other) codec model",
+    )
+    parser.add_argument(
+        "--hf_model_tag",
+        type=str_or_none,
+        default=None,
+        help="huggingface model card for Espnet codec model",
     )
     parser.add_argument(
         "rspecifier", type=str, help="Read specifier for feats. e.g. ark:some.ark"
@@ -75,6 +81,7 @@ def dump_codec(
     rank: int,
     checkpoint_path: str = None,
     config_path: str = None,
+    hf_model_tag: str = None,
 ):
     # (1) Device
     if torch.cuda.is_available():
@@ -98,6 +105,7 @@ def dump_codec(
         dump_audio,
         checkpoint_path,
         config_path,
+        hf_model_tag,
     )
 
     # (3) Tokenizer loop

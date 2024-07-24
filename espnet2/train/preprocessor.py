@@ -1945,13 +1945,19 @@ class SpkPreprocessor(CommonPreprocessor):
         ] = None,
         noise_apply_prob: float = 1.0,
         short_noise_thres: float = 0.5,
+        is_codec: bool = False,
+        codec_n_token_per_frame: int = 8,
+        codec_n_frame_per_second: int = 100,
     ):
         super().__init__(train, rir_scp=rir_scp, rir_apply_prob=rir_apply_prob)
 
         self.spk2label = None  # a dictionary that maps string speaker label to int
         self.sample_rate = sample_rate
-        self.target_duration = int(target_duration * sample_rate)
+        self.target_duration = int(target_duration * sample_rate) if not is_codec else int(target_duration * codec_n_token_per_frame * codec_n_frame_per_second)
         self.num_eval = num_eval
+        self.is_codec = is_codec
+        self.codec_n_token_per_frame = codec_n_token_per_frame
+        self.codec_n_frame_per_second = codec_n_frame_per_second
 
         if train:
             with open(spk2utt, "r") as f_s2u:
@@ -2013,18 +2019,29 @@ class SpkPreprocessor(CommonPreprocessor):
             self.spk2label[spk] = label_idx
             label_idx += 1
 
+    def _round_by_number(self, inp, number: int) -> int:
+        return (inp // number) * number
+
     def _speech_process(self, data: Dict[np.ndarray, str]):
         if self.train:
             audio = data["speech"]
+            #print('aa', type(audio)) #>> numpy.ndarray
+            #print(audio.shape) #>> (8123,)
 
             # duplicate if utt is shorter than minimum required duration
             if len(audio) < self.target_duration:
                 shortage = self.target_duration - len(audio) + 1
                 audio = np.pad(audio, (0, shortage), "wrap")
 
-            startframe = np.array(
-                [np.int64(random.random() * (len(audio) - self.target_duration))]
-            )
+            if self.is_codec:
+                startframe = np.array(
+                    [np.int64(self._round_by_number(random.random() * (len(audio) - self.target_duration), self.codec_n_token_per_frame))]
+                )
+            else:
+                startframe = np.array(
+                    [np.int64(random.random() * (len(audio) - self.target_duration))]
+                )
+
 
             data["speech"] = audio[
                 int(startframe) : int(startframe) + self.target_duration
@@ -2049,6 +2066,8 @@ class SpkPreprocessor(CommonPreprocessor):
             )
             audios = []
             for frame in startframe:
+                if self.is_codec:
+                    frame = self._round_by_number(frame, self.codec_n_token_per_frame)
                 audios.append(audio[int(frame) : int(frame) + self.target_duration])
             audios = np.stack(audios, axis=0)
 
@@ -2057,6 +2076,8 @@ class SpkPreprocessor(CommonPreprocessor):
             )
             audios2 = []
             for frame in startframe2:
+                if self.is_codec:
+                    frame = self._round_by_number(frame, self.codec_n_token_per_frame)
                 audios2.append(audio2[int(frame) : int(frame) + self.target_duration])
             audios2 = np.stack(audios2, axis=0)
 

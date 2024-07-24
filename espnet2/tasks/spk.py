@@ -13,6 +13,7 @@ from espnet2.asr.frontend.fused import FusedFrontends
 from espnet2.asr.frontend.melspec_torch import MelSpectrogramTorch
 from espnet2.asr.frontend.s3prl import S3prlFrontend
 from espnet2.asr.frontend.windowing import SlidingWindow
+from espnet2.mt.frontend.embedding import CodecEmbedding
 from espnet2.asr.specaug.abs_specaug import AbsSpecAug
 from espnet2.asr.specaug.specaug import SpecAug
 from espnet2.layers.abs_normalize import AbsNormalize
@@ -61,6 +62,7 @@ frontend_choices = ClassChoices(
         melspec_torch=MelSpectrogramTorch,
         sliding_window=SlidingWindow,
         s3prl=S3prlFrontend,
+        codec_embedding=CodecEmbedding,
     ),
     type_check=AbsFrontend,
     default=None,

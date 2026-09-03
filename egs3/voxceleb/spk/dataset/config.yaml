@@ -69,3 +69,21 @@ dataset:
     - voxceleb1_dev
     - voxceleb1_test
     - voxceleb2_dev
+    # Baked band x speed variants. `wb`/`nb` are wideband and the band-limited
+    # telephony copy; both are 16 kHz containers, since deployment upsamples
+    # 8 kHz telephony before inference. `sp09`/`sp11` are speed-perturbed, which
+    # mints new speaker classes -- unlike the band, which shares them. These
+    # splits are produced by kanzi's build_manifests.py from baked metadata, not
+    # by `create_dataset`, which cannot express the variant matrix.
+    - voxceleb1_wb
+    - voxceleb1_wb_sp09
+    - voxceleb1_wb_sp11
+    - voxceleb1_nb
+    - voxceleb1_nb_sp09
+    - voxceleb1_nb_sp11
+    - voxceleb2_wb
+    - voxceleb2_wb_sp09
+    - voxceleb2_wb_sp11
+    - voxceleb2_nb
+    - voxceleb2_nb_sp09
+    - voxceleb2_nb_sp11

@@ -1,0 +1,217 @@
+##########################################################
+#                    TRAINING SETTING                    #
+##########################################################
+# ReDimNet2-b6 on VoxCeleb 1+2 dev, both bands, three speeds.
+#
+# Quick usage:
+#   python run.py --stages train infer measure \
+#       --training_config conf/tuning/training_redimnet2_b6.yaml
+#
+# The `create_dataset` stage cannot produce this training set. It derives
+# manifests by scanning a VoxCeleb source tree, and has no notion of a
+# band-limited copy or a speed-perturbed one. The twelve splits below come from
+# kanzi's `build_manifests.py`, which reads the baked Parquet metadata where
+# every utterance already carries its correct speaker label.
+#
+# Architecture matches the reference b6 (`applications/speaker_rec/examples/
+# vox2/recipes/redimnet2/b6/ptn.yaml` in PalabraAI/redimnet2): 12.3M parameters,
+# 0.287% EER on Vox1-O when trained on VoxCeleb2-dev alone.
+#
+# Two deliberate departures from the reference, both documented below: the loss
+# and the margin schedule.
+
+num_device: 4
+
+##########################################################
+#                    DATASET DEFINITION                  #
+##########################################################
+# Twelve splits: {voxceleb1, voxceleb2} x {wb, nb} x {1.0, 0.9, 1.1}.
+# `CombinedDataset` merges them, so there is no combined manifest to rebuild
+# when the mix changes -- add or remove a line here.
+#
+# The band contributes no new speaker class and the speed does: a speaker heard
+# over a phone is the same speaker, whereas a resampled one is treated as a new
+# one. That is what makes 1,211 + 5,994 speakers into 21,615 classes, and it is
+# why `preprocessor.spk2utt` must point at the union rather than at any single
+# split.
+dataset:
+  train:
+    - data_src_args:
+        split: voxceleb1_wb
+    - data_src_args:
+        split: voxceleb1_wb_sp09
+    - data_src_args:
+        split: voxceleb1_wb_sp11
+    - data_src_args:
+        split: voxceleb1_nb
+    - data_src_args:
+        split: voxceleb1_nb_sp09
+    - data_src_args:
+        split: voxceleb1_nb_sp11
+    - data_src_args:
+        split: voxceleb2_wb
+    - data_src_args:
+        split: voxceleb2_wb_sp09
+    - data_src_args:
+        split: voxceleb2_wb_sp11
+    - data_src_args:
+        split: voxceleb2_nb
+    - data_src_args:
+        split: voxceleb2_nb_sp09
+    - data_src_args:
+        split: voxceleb2_nb_sp11
+  valid:
+    # Vox1-O every epoch, on the untouched 40-speaker test split. A strided
+    # subset keeps validation from dominating epoch time; the `infer` stage
+    # scores all 37,611 trials.
+    - data_src_args:
+        split: voxceleb1_test
+        trials: vox1_o
+        num_trials: 10000
+
+  preprocessor:
+    # The label space spanning all twelve training splits. Its line count is
+    # `model.spk_num` below, and a mismatch is a silent accuracy bug.
+    spk2utt: ${data_dir}/vox12_dualband_sp/spk2utt
+    noise_apply_prob: 0.5
+    noise_info:
+      - [1.0, "${data_dir}/musan_speech.scp", [4, 7], [13, 20]]
+      - [1.0, "${data_dir}/musan_noise.scp", [1, 1], [0, 15]]
+      - [1.0, "${data_dir}/musan_music.scp", [1, 1], [5, 15]]
+    rir_apply_prob: 0.5
+    rir_scp: ${data_dir}/rirs.scp
+
+create_dataset:
+  recipe_dir: ${recipe_dir}
+
+##########################################################
+#                      MODEL SETTING                     #
+##########################################################
+model:
+  # 1,211 (VoxCeleb1 dev) + 5,994 (VoxCeleb2 dev) = 7,205 speakers, tripled by
+  # the three speeds. The two bands add nothing. Must equal
+  # `wc -l < data/vox12_dualband_sp/spk2utt`.
+  spk_num: 21615
+
+  # ReDimNet2 owns its own feature extractor -- `TFMelBanks` when
+  # `feat_type: tf` -- so the task-level frontend is disabled rather than
+  # producing filterbanks the encoder would ignore.
+  frontend: null
+
+  encoder: redimnet2
+  encoder_conf:
+    # Verbatim from the reference b6 recipe.
+    F: 72
+    C: 64
+    embed_dim: 192
+    out_channels: 224
+    feat_type: tf
+    hop_length: 160
+    block_1d_type: conv+att
+    block_2d_type: basic_resnet
+    return_2d_output: true
+    agg_gnorm: true
+    compress_tconvs: true
+    fm_weigthing_type: NC
+    group_divisor: 1
+    spec_in_channels: 1
+    causal: none
+    spec_params:
+      do_preemph: true
+      norm_signal: true
+      # Spectral augmentation is off: MUSAN and RIR augmentation already run in
+      # the preprocessor, and the reference leaves this off too.
+      do_spec_aug: false
+    stages_setup:
+      - [[1, 1], 3, 3, [[3, 3]], 64]
+      - [[2, 1], 4, 2, [[3, 3]], 64]
+      - [[1, 2], 5, 2, [[3, 3]], 48]
+      - [[2, 1], 5, 1, [[3, 3]], 48]
+      - [[1, 2], 4, 0.75, [[3, 3]], 32]
+      - [[2, 1], 3, 0.5, [[3, 3]], 24]
+
+  # ReDimNet2's attentive statistics pooling. NOT `chn_attn_stat`, which inserts
+  # a BatchNorm and uses ReLU where this uses tanh; their state dicts are
+  # incompatible and the released weights will not load into it.
+  pooling: astp
+  pooling_conf:
+    bottleneck_dim: 128
+    global_context_att: true
+  # `input_size` is intentionally absent here and below: the task derives them
+  # from `encoder.output_size()` and `pooling.output_size()`.
+
+  projector: rawnet3
+  projector_conf:
+    output_size: 192
+
+  # DEPARTURE FROM THE REFERENCE: b6 uses SphereFace2 (`project_type:
+  # sphereface2`, `margin_type: C`, scale 32, lambda 0.7, t 3). ESPnet offers
+  # only aamsoftmax, aamsoftmax_sc_topk and softmax, so this starts from
+  # sub-center AAM-softmax with inter-top-k. Expect to be behind the published
+  # number until SphereFace2 exists here.
+  loss: aamsoftmax_sc_topk
+  loss_conf:
+    margin: 0.3
+    scale: 30
+    K: 3
+    mp: 0.06
+    k_top: 5
+
+##########################################################
+#            OPTIMIZER & SCHEDULER SETTING               #
+##########################################################
+optim: adam
+optim_conf:
+  lr: 0.001
+  weight_decay: 0.00005
+  amsgrad: false
+
+scheduler:
+  _target_: espnet2.schedulers.cosine_anneal_warmup_restart.CosineAnnealingWarmupRestarts
+  # One cycle is 10 epochs. The training set here is 7,443,906 utterances --
+  # 1,240,651 x 6 variants -- so at batch_size 256 an epoch is 29,077 steps and
+  # a cycle is 290,770. The RawNet3 recipe's 48,460 is for the unaugmented
+  # 1.24M set; using that number here would restart the schedule six times per
+  # intended cycle.
+  first_cycle_steps: 290770
+  cycle_mult: 1.0
+  max_lr: 0.001
+  min_lr: 0.000005
+  warmup_steps: 1000
+  gamma: 0.75
+
+##########################################################
+#                    TRAINER SETTING                     #
+##########################################################
+trainer:
+  max_epochs: 40
+  # Vox1-O EER after every epoch, which is what checkpoint selection uses.
+  check_val_every_n_epoch: 1
+
+dataloader:
+  train:
+    batch_size: 256
+    num_workers: 8
+    shuffle: true
+    drop_last: true
+    pin_memory: true
+    # Forked workers inherit an initialised CUDA context and abort with
+    # `CUDA error: initialization error`. num_workers=0 avoids it but starves
+    # the GPU (measured at 0% utilisation), so spawn is the only setting that
+    # keeps the loader both parallel and alive.
+    multiprocessing_context: spawn
+    # Spawned workers re-import the world; keeping them alive amortises it.
+    persistent_workers: true
+  valid:
+    batch_size: 16
+    num_workers: 4
+    shuffle: false
+    drop_last: false
+    pin_memory: true
+    multiprocessing_context: spawn
+    persistent_workers: true
+
+# NOT SET: a margin schedule. The reference ramps the AAM margin across
+# pretraining via its own `MarginScheduler`, and ESPnet has nine learning-rate
+# schedulers and no margin scheduler at all. Training with a constant margin
+# works; reproducing the reference's numbers will need one.

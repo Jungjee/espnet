@@ -22,6 +22,7 @@ from espnet2.spk.encoder.conformer_encoder import MfaConformerEncoder
 from espnet2.spk.encoder.ecapa_tdnn_encoder import EcapaTdnnEncoder
 from espnet2.spk.encoder.identity_encoder import IdentityEncoder
 from espnet2.spk.encoder.rawnet3_encoder import RawNet3Encoder
+from espnet2.spk.encoder.redimnet2_encoder import RedimNet2Encoder
 from espnet2.spk.encoder.resnet_encoder import ResNetEncoder
 from espnet2.spk.encoder.ska_tdnn_encoder import SkaTdnnEncoder
 from espnet2.spk.encoder.xvector_encoder import XvectorEncoder
@@ -32,6 +33,7 @@ from espnet2.spk.loss.aamsoftmax_subcenter_intertopk import (
 )
 from espnet2.spk.loss.softmax import Softmax
 from espnet2.spk.pooling.abs_pooling import AbsPooling
+from espnet2.spk.pooling.astp_pooling import AstpPooling
 from espnet2.spk.pooling.chn_attn_stat_pooling import ChnAttnStatPooling
 from espnet2.spk.pooling.mean_pooling import MeanPooling
 from espnet2.spk.pooling.stat_pooling import StatsPooling
@@ -95,6 +97,7 @@ encoder_choices = ClassChoices(
         identity=IdentityEncoder,
         mfaconformer=MfaConformerEncoder,
         rawnet3=RawNet3Encoder,
+        redimnet2=RedimNet2Encoder,
         resnet=ResNetEncoder,
         ska_tdnn=SkaTdnnEncoder,
         xvector=XvectorEncoder,
@@ -106,6 +109,7 @@ encoder_choices = ClassChoices(
 pooling_choices = ClassChoices(
     name="pooling",
     classes=dict(
+        astp=AstpPooling,
         chn_attn_stat=ChnAttnStatPooling,
         mean=MeanPooling,
         stats=StatsPooling,

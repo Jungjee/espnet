@@ -85,11 +85,17 @@ model:
 ##########################################################
 #            OPTIMIZER & SCHEDULER SETTING               #
 ##########################################################
+# Recipe `optimizer:` blocks are deep-merged onto this one, not substituted for
+# it, so anything named here that is specific to Adam survives a recipe that
+# switches `_target_` and breaks instantiation. `amsgrad: false` used to be
+# listed and did exactly that:
+#   TypeError: SGD.__init__() got an unexpected keyword argument 'amsgrad'
+# It is also Adam's own default, so naming it bought nothing. Keep this block to
+# arguments every optimiser accepts.
 optimizer:
   _target_: torch.optim.Adam
   lr: 0.001
   weight_decay: 0.00005
-  amsgrad: false
 
 scheduler:
 scheduler_interval: step

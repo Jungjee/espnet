@@ -80,6 +80,10 @@ dataset:
       - [1.0, "${data_dir}/musan_music.scp", [1, 1], [5, 15]]
     rir_apply_prob: 0.5
     rir_scp: ${data_dir}/rirs.scp
+    # 2-second crops, matching the reference's `num_frms: 200` at a 10 ms hop.
+    # The TEMPLATE default is 3.0; b6's activations are large enough that the
+    # extra second is not free.
+    target_duration: 2.0
 
 create_dataset:
   recipe_dir: ${recipe_dir}
@@ -168,12 +172,13 @@ optim_conf:
 
 scheduler:
   _target_: espnet2.schedulers.cosine_anneal_warmup_restart.CosineAnnealingWarmupRestarts
-  # One cycle is 10 epochs. The training set here is 7,443,906 utterances --
-  # 1,240,651 x 6 variants -- so at batch_size 256 an epoch is 29,077 steps and
-  # a cycle is 290,770. The RawNet3 recipe's 48,460 is for the unaugmented
-  # 1.24M set; using that number here would restart the schedule six times per
-  # intended cycle.
-  first_cycle_steps: 290770
+  # One cycle is 10 epochs. The training set is 7,443,906 utterances
+  # (1,240,651 x 6 variants) and Lightning counts steps per rank, so at
+  # batch_size 140 on 4 devices an epoch is 7,443,906 / (140 * 4) = 13,293
+  # steps and a ten-epoch cycle is 132,930. The RawNet3 recipe's 48,460 is for
+  # the unaugmented 1.24M set at batch 256; reusing it here would restart the
+  # cosine schedule several times per intended cycle.
+  first_cycle_steps: 132930
   cycle_mult: 1.0
   max_lr: 0.001
   min_lr: 0.000005
@@ -184,13 +189,22 @@ scheduler:
 #                    TRAINER SETTING                     #
 ##########################################################
 trainer:
+  # The reference trains b6 for 120 epochs; 40 is inherited from the RawNet3
+  # recipe and is a starting point, not a reproduction.
   max_epochs: 40
+  # precision: bf16-mixed comes from the TEMPLATE, matching the reference's
+  # enable_amp. Stated here because b6 does not fit without it.
   # Vox1-O EER after every epoch, which is what checkpoint selection uses.
   check_val_every_n_epoch: 1
 
 dataloader:
   train:
-    batch_size: 256
+    # 140, from the reference b6 recipe -- not RawNet3's 256. b6 is 13.05 GMACs
+    # and inheriting the larger batch ran a 139.8 GiB H200 out of memory inside
+    # the backbone's `upsample_nearest1d`, even with bf16 on:
+    #   torch.OutOfMemoryError: Tried to allocate 1.30 GiB
+    # The reference scales it by model size: b0 512, b2 192, b6 140.
+    batch_size: 140
     num_workers: 8
     shuffle: true
     drop_last: true

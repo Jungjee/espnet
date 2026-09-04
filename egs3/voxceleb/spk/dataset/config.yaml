@@ -87,3 +87,21 @@ dataset:
     - voxceleb2_nb
     - voxceleb2_nb_sp09
     - voxceleb2_nb_sp11
+    # VoxBlink 1-clean and 2, same variant matrix. Baked from video-level MP3
+    # sliced by the corpora's own timestamp annotations, so one source file
+    # yields many utterances. VoxBlink1 is held back from the training mix by
+    # default: the OSSI open-set identification benchmark from the VoxBlink2
+    # paper draws its entire gallery from VoxBlink1-clean, so training on it
+    # forfeits that evaluation.
+    - voxblink1_wb
+    - voxblink1_wb_sp09
+    - voxblink1_wb_sp11
+    - voxblink1_nb
+    - voxblink1_nb_sp09
+    - voxblink1_nb_sp11
+    - voxblink2_wb
+    - voxblink2_wb_sp09
+    - voxblink2_wb_sp11
+    - voxblink2_nb
+    - voxblink2_nb_sp09
+    - voxblink2_nb_sp11

@@ -17,8 +17,9 @@
 # vox2/recipes/redimnet2/b6/ptn.yaml` in PalabraAI/redimnet2): 12.3M parameters,
 # 0.287% EER on Vox1-O when trained on VoxCeleb2-dev alone.
 #
-# Two deliberate departures from the reference, both documented below: the loss
-# and the margin schedule.
+# One deliberate departure from the reference, documented below: the loss.
+# ESPnet has no SphereFace2, so this uses `aamsoftmax_sc_topk`. The reference's
+# margin schedule is now reproduced (see `trainer.callbacks`).
 
 num_device: 4
 
@@ -217,6 +218,29 @@ trainer:
   # Vox1-O EER after every epoch, which is what checkpoint selection uses.
   check_val_every_n_epoch: 1
 
+  # BOTH callbacks must be listed here. This key replaces the TEMPLATE's list
+  # rather than extending it -- OmegaConf merges mappings deeply but overwrites
+  # sequences -- so omitting SpeakerVerificationScoring would silently stop
+  # `valid/eer` from ever being logged, and `best_model_criterion` selects on
+  # it.
+  callbacks:
+    - _target_: espnet3.systems.spk.callbacks.SpeakerVerificationScoring
+      p_target: 0.05
+      c_miss: 1.0
+      c_fa: 1.0
+    # The reference ramps the margin instead of training at its final value
+    # from step 0 (`MarginScheduler` in wespeaker_lite): held at 0, raised
+    # between epochs 20 and 40, fixed after. `final_margin` must equal
+    # `model.loss_conf.margin` below -- the schedule overwrites the margin
+    # every step, so a different value there would be dead config. The
+    # callback warns if the two disagree.
+    - _target_: espnet3.systems.spk.callbacks.MarginScheduler
+      initial_margin: 0.0
+      final_margin: 0.3
+      increase_start_epoch: 20
+      fix_start_epoch: 40
+      increase_type: exp
+
 dataloader:
   train:
     # 140, from the reference b6 recipe -- not RawNet3's 256. b6 is 13.05 GMACs
@@ -245,7 +269,7 @@ dataloader:
     multiprocessing_context: spawn
     persistent_workers: true
 
-# NOT SET: a margin schedule. The reference ramps the AAM margin across
-# pretraining via its own `MarginScheduler`, and ESPnet has nine learning-rate
-# schedulers and no margin scheduler at all. Training with a constant margin
-# works; reproducing the reference's numbers will need one.
+# The margin schedule is set, under `trainer.callbacks` above. ESPnet ships
+# nine learning-rate schedulers and had no margin scheduler, so `MarginScheduler`
+# was added to `espnet3/systems/spk/callbacks.py` to reproduce the reference's
+# ramp (saturating exponential, stepped per iteration, 1-indexed epochs).

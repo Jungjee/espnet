@@ -62,13 +62,19 @@ dataset:
     - data_src_args:
         split: voxceleb2_nb_sp11
   valid:
-    # Vox1-O every epoch, on the untouched 40-speaker test split. A strided
-    # subset keeps validation from dominating epoch time; the `infer` stage
-    # scores all 37,611 trials.
+    # Vox1-O every epoch, on the untouched 40-speaker test split, over the
+    # WHOLE 37,611-trial protocol.
+    #
+    # `num_trials` is deliberately absent: with it unset the dataset keeps
+    # every trial. Upstream's own recipes (training_rawnet3.yaml,
+    # training_xeus_ecapa.yaml) stride it to 10,000 to keep validation off the
+    # critical path, and this recipe inherited that -- which quietly made every
+    # per-epoch EER incomparable to any published Vox1-O number, including the
+    # 0.287% this recipe is trying to beat. A cheaper metric that cannot be
+    # compared to the target is not cheaper.
     - data_src_args:
         split: voxceleb1_test
         trials: vox1_o
-        num_trials: 10000
 
   preprocessor:
     # The label space spanning all twelve training splits. Its line count is

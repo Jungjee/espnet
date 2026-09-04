@@ -112,9 +112,12 @@ frozen for the first 5,000 updates and fine-tuned jointly afterwards.
 - `spk_num` in the training config must equal the number of speakers in the
   label space, that is `wc -l < data/voxceleb12_dev/spk2utt`. It is 7,205 for
   VoxCeleb 1 dev + VoxCeleb 2 dev. `create_dataset` logs the number it wrote.
-- Checkpoints are selected on `valid/eer`, computed each epoch over a strided
-  10,000-trial subset of Vox1-O. Raise `num_trials` for a tighter estimate, at
-  the cost of slower epochs. The `infer` stage always scores the full list.
+- Checkpoints are selected on `valid/eer`, computed each epoch. The
+  ReDimNet2-b6 recipe scores the **full 37,611-trial** Vox1-O list, by leaving
+  `num_trials` unset -- a strided subset makes the number cheaper but
+  incomparable to any published Vox1-O result, which defeats the purpose of
+  tracking it. The other recipes here still stride to 10,000; raise or remove
+  `num_trials` if you intend to compare them against literature.
 - Trial IDs in `score.scp` and `label.scp` are line numbers in
   `data/voxceleb1_test/vox1_o.trials`.
 

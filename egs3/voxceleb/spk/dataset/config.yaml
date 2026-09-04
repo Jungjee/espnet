@@ -105,3 +105,23 @@ dataset:
     - voxblink2_nb
     - voxblink2_nb_sp09
     - voxblink2_nb_sp11
+    # CN-Celeb 1 and 2. Flat `data/<speaker>/<utt>.flac` at source, already
+    # 16 kHz mono, so no segment parsing -- but note CN-Celeb1 splits 997
+    # speakers into 797 dev and 196 eval, and `cnceleb1` here is the dev half
+    # only. The eval half is `cnceleb1_eval`, band variants but no speed
+    # perturbation (like voxceleb1_test), and it must stay out of every
+    # training mix: it carries a 3,484,292-trial protocol.
+    - cnceleb1_wb
+    - cnceleb1_wb_sp09
+    - cnceleb1_wb_sp11
+    - cnceleb1_nb
+    - cnceleb1_nb_sp09
+    - cnceleb1_nb_sp11
+    - cnceleb2_wb
+    - cnceleb2_wb_sp09
+    - cnceleb2_wb_sp11
+    - cnceleb2_nb
+    - cnceleb2_nb_sp09
+    - cnceleb2_nb_sp11
+    - cnceleb1_eval_wb
+    - cnceleb1_eval_nb

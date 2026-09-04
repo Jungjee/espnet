@@ -19,6 +19,8 @@ rename.
 
 from __future__ import annotations
 
+from typing import Optional
+
 import torch
 
 from espnet2.spk.pooling.abs_pooling import AbsPooling
@@ -58,13 +60,26 @@ class AstpPooling(AbsPooling):
     def output_size(self) -> int:
         return self._output_size
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        x: torch.Tensor,
+        feat_lengths: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         """Pool ``(B, C, T)`` frame-level features to ``(B, 2C)``.
 
         A 4-D ``(B, C, F, T)`` input is folded to ``(B, C*F, T)`` first, matching
         the reference.
+
+        Args:
+            x: frame-level features, channel-major.
+            feat_lengths: accepted for signature compatibility with the other
+                poolings -- `ESPnetSpeakerModel` passes it -- and deliberately
+                unused. `SpkPreprocessor` emits fixed-length crops, so every
+                utterance in a batch has the same length and there is nothing to
+                mask; the reference implementation does not mask either. If a
+                variable-length batch is ever fed here, the statistics would
+                include padding and this would need a real mask.
         """
-        x = input
         if x.dim() == 4:
             x = x.reshape(x.shape[0], x.shape[1] * x.shape[2], x.shape[3])
         assert x.dim() == 3, f"expected (B, C, T), got {tuple(x.shape)}"

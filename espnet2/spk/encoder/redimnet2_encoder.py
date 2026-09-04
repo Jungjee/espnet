@@ -18,7 +18,6 @@ featurisation, so ESPnet's frontend must be disabled (``frontend: null``, which
 
 from __future__ import annotations
 
-from typing import Optional, Tuple
 
 import torch
 
@@ -126,14 +125,23 @@ class RedimNet2Encoder(AbsEncoder):
     def output_size(self) -> int:
         return self._output_size
 
-    def forward(
-        self,
-        xs_pad: torch.Tensor,
-        ilens: torch.Tensor,
-        prev_states: torch.Tensor = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
-        """Encode raw waveform ``(B, T)`` to frame-level features ``(B, T', C)``."""
-        x = xs_pad
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Encode raw waveform ``(B, T)`` into frame-level features ``(B, C, T')``.
+
+        The speaker task's encoder contract is one tensor in, one tensor out --
+        `ESPnetSpeakerModel.encode_frame` calls `self.encoder(feats)` and hands
+        the result straight to the aggregator. That differs from the ASR
+        contract of the shared `AbsEncoder` base, which takes `(xs_pad, ilens,
+        prev_states)` and returns a tuple; following the base class here rather
+        than the task cost a training run with
+
+            TypeError: RedimNet2Encoder.forward() missing 1 required
+            positional argument: 'ilens'
+
+        With `frontend: null` -- which this encoder requires, since it owns its
+        own feature extractor -- `feats` is the raw waveform, so `x` is `(B, T)`.
+        Output stays channel-major because that is what the poolings consume.
+        """
         if self.pad_right_samples is not None:
             x = torch.nn.functional.pad(x, (0, self.pad_right_samples), value=0.0)
 
@@ -148,5 +156,4 @@ class RedimNet2Encoder(AbsEncoder):
         if self.before_pool_offset is not None:
             out = out[:, :, self.before_pool_offset :]
 
-        # AbsEncoder is time-major; pooling transposes back.
-        return out.transpose(1, 2), ilens, None
+        return out

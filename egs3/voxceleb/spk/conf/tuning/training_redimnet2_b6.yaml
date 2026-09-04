@@ -164,26 +164,46 @@ model:
 ##########################################################
 #            OPTIMIZER & SCHEDULER SETTING               #
 ##########################################################
-optim: adam
-optim_conf:
-  lr: 0.001
-  weight_decay: 0.00005
-  amsgrad: false
+# `optimizer:` with a `_target_`, NOT espnet2's `optim:`/`optim_conf:`. This
+# recipe originally used the latter, and espnet3 silently ignored it -- the
+# resolved config carried both a dead `optim: adam` key and the TEMPLATE's
+# default Adam, so the file claimed one optimiser and the run used another.
+#
+# SGD with Nesterov momentum at lr 0.1 is the reference b6 recipe's choice, not
+# the Adam inherited from RawNet3. Effective batch matches too: the reference
+# runs batch 140 per GPU on 8 GPUs, and so does this.
+optimizer:
+  _target_: torch.optim.SGD
+  lr: 0.1
+  momentum: 0.9
+  nesterov: true
+  weight_decay: 0.00002
 
+# One cosine cycle over the whole run, not warm restarts.
+#
+# The reference uses ExponentialDecrease from 0.1 to 6e-5 with six epochs of
+# warm-up from zero and no restarts. Cosine and exponential differ in shape but
+# both are monotone decays between the same endpoints, which is far closer to
+# the reference than the RawNet3 recipe's repeated restarts with gamma decay.
+#
+# `first_cycle_steps` and `warmup_steps` are in OPTIMISER STEPS -- the TEMPLATE
+# sets `scheduler_interval: step` -- so both depend on batch size AND device
+# count: steps/epoch = utterances / (batch_size * num_device). Hardcoding them
+# is how this recipe came to carry a value computed for 4 devices while the job
+# ran on 8, making a nominal 10-epoch cycle a 20-epoch one. train_run.sh now
+# derives both from the actual run parameters and overwrites what is here, so
+# these values are a readable default rather than the source of truth.
 scheduler:
   _target_: espnet2.schedulers.cosine_anneal_warmup_restart.CosineAnnealingWarmupRestarts
-  # One cycle is 10 epochs. The training set is 7,443,906 utterances
-  # (1,240,651 x 6 variants) and Lightning counts steps per rank, so at
-  # batch_size 140 on 4 devices an epoch is 7,443,906 / (140 * 4) = 13,293
-  # steps and a ten-epoch cycle is 132,930. The RawNet3 recipe's 48,460 is for
-  # the unaugmented 1.24M set at batch 256; reusing it here would restart the
-  # cosine schedule several times per intended cycle.
-  first_cycle_steps: 132930
+  # 80 epochs x 6,646 steps/epoch at batch 140 on 8 devices.
+  first_cycle_steps: 531680
   cycle_mult: 1.0
-  max_lr: 0.001
-  min_lr: 0.000005
-  warmup_steps: 1000
-  gamma: 0.75
+  max_lr: 0.1
+  min_lr: 0.00006
+  # Six epochs, matching the reference's `warm_up_epoch: 6`.
+  warmup_steps: 39876
+  # Irrelevant with a single cycle; 1.0 makes that explicit.
+  gamma: 1.0
 
 ##########################################################
 #                    TRAINER SETTING                     #

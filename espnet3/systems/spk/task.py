@@ -34,6 +34,7 @@ from espnet2.spk.encoder.resnet_encoder import ResNetEncoder
 from espnet2.spk.encoder.ska_tdnn_encoder import SkaTdnnEncoder
 from espnet2.spk.encoder.xvector_encoder import XvectorEncoder
 from espnet2.spk.loss.aamsoftmax import AAMSoftmax
+from espnet2.spk.loss.sphereface2 import SphereFace2
 from espnet2.spk.loss.aamsoftmax_subcenter_intertopk import (
     ArcMarginProduct_intertopk_subcenter,
 )
@@ -151,6 +152,7 @@ loss_choices = ClassChoices(
     classes=dict(
         aamsoftmax=AAMSoftmax,
         aamsoftmax_sc_topk=ArcMarginProduct_intertopk_subcenter,
+        sphereface2=SphereFace2,
         softmax=Softmax,
     ),
     default="aamsoftmax",

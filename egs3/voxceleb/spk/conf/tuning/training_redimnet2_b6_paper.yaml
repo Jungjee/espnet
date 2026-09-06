@@ -67,7 +67,6 @@ dataset:
     rir_apply_prob: 0.5
     rir_scp: ${data_dir}/rirs.scp
     target_duration: 2.0
-    valid: {}
 create_dataset:
   recipe_dir: ${recipe_dir}
 model:

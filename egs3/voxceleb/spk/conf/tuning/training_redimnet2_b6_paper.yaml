@@ -1,28 +1,3 @@
-# ReDimNet2-b6, PAPER-FAITHFUL ARM (run D).
-#
-# Generated from training_redimnet2_b6.yaml by matching the released reference
-# recipe field by field:
-#   applications/speaker_rec/examples/vox2/recipes/redimnet2/b6/ptn.yaml
-# in PalabraAI/redimnet2. The recipe, not the paper text, is the source of
-# truth -- it is what produced 0.287% Vox1-O.
-#
-# Differences from the sibling arms A/B/C, all from the reference:
-#   VoxCeleb2-dev only (17,982 classes, not 21,615)
-#   SphereFace2-C, scale 32.0, lanbuda 0.7, t 3   (bit-exact port)
-#   margin ramp 0.0 -> 0.20 over epochs 20-40, increase_type exp
-#   ExponentialDecrease 0.1 -> 6e-5, 6-epoch warm-up, warm_from_zero true
-#   120 epochs, batch 140, num_workers 16, pin_memory false, prefetch 2
-#   F: 72  (fbank_args.num_mel_bins: 80 in the reference is dead config,
-#           because feat_type: tf makes the model use its own TFMelBanks)
-#
-# Known remaining gaps, see docs/spkid-reference-parity.md:
-#   augmentation is independent 0.5/0.5 here vs the reference's mutually
-#     exclusive aug_prob 0.6;
-#   loss_weight_decay_mult 5.0 is not applied;
-#   the LM finetuning stage needs a weight-only checkpoint init hook.
-#
-# Inline comments are absent because this file is generated structurally --
-# regex edits on the parent silently failed to match three times.
 num_device: 4
 dataset:
   train:
@@ -43,30 +18,34 @@ dataset:
       split: voxceleb1_test
       trials: vox1_o
   preprocessor:
-    spk2utt: ${data_dir}/vox2_dualband_sp/spk2utt
-    noise_apply_prob: 0.5
-    noise_info:
-    - - 1.0
-      - ${data_dir}/musan_speech.scp
-      - - 4
-        - 7
-      - - 13
-        - 20
-    - - 1.0
-      - ${data_dir}/musan_noise.scp
-      - - 1
-        - 1
-      - - 0
-        - 15
-    - - 1.0
-      - ${data_dir}/musan_music.scp
-      - - 1
-        - 1
-      - - 5
-        - 15
-    rir_apply_prob: 0.5
-    rir_scp: ${data_dir}/rirs.scp
-    target_duration: 2.0
+    train:
+      spk2utt: ${data_dir}/vox2_dualband_sp/spk2utt
+      noise_apply_prob: 0.5
+      noise_info:
+      - - 1.0
+        - ${data_dir}/musan_speech.scp
+        - - 4
+          - 7
+        - - 13
+          - 20
+      - - 1.0
+        - ${data_dir}/musan_noise.scp
+        - - 1
+          - 1
+        - - 0
+          - 15
+      - - 1.0
+        - ${data_dir}/musan_music.scp
+        - - 1
+          - 1
+        - - 5
+          - 15
+      rir_apply_prob: 0.5
+      rir_scp: ${data_dir}/rirs.scp
+      target_duration: 2.0
+    valid:
+      spk2utt: ${data_dir}/vox2_dualband_sp/spk2utt
+      target_duration: 8.0
 create_dataset:
   recipe_dir: ${recipe_dir}
 model:
@@ -197,3 +176,7 @@ dataloader:
     pin_memory: true
     multiprocessing_context: spawn
     persistent_workers: true
+best_model_criterion:
+- - valid/eer
+  - 10
+  - min

@@ -14,30 +14,34 @@ dataset:
       split: voxceleb1_test
       trials: vox1_o
   preprocessor:
-    spk2utt: ${data_dir}/vox12_dualband_sp/spk2utt
-    noise_apply_prob: 0.5
-    noise_info:
-    - - 1.0
-      - ${data_dir}/musan_speech.scp
-      - - 4
-        - 7
-      - - 13
-        - 20
-    - - 1.0
-      - ${data_dir}/musan_noise.scp
-      - - 1
-        - 1
-      - - 0
-        - 15
-    - - 1.0
-      - ${data_dir}/musan_music.scp
-      - - 1
-        - 1
-      - - 5
-        - 15
-    rir_apply_prob: 0.5
-    rir_scp: ${data_dir}/rirs.scp
-    target_duration: 6.0
+    train:
+      spk2utt: ${data_dir}/vox12_dualband_sp/spk2utt
+      noise_apply_prob: 0.5
+      noise_info:
+      - - 1.0
+        - ${data_dir}/musan_speech.scp
+        - - 4
+          - 7
+        - - 13
+          - 20
+      - - 1.0
+        - ${data_dir}/musan_noise.scp
+        - - 1
+          - 1
+        - - 0
+          - 15
+      - - 1.0
+        - ${data_dir}/musan_music.scp
+        - - 1
+          - 1
+        - - 5
+          - 15
+      rir_apply_prob: 0.5
+      rir_scp: ${data_dir}/rirs.scp
+      target_duration: 6.0
+    valid:
+      spk2utt: ${data_dir}/vox12_dualband_sp/spk2utt
+      target_duration: 8.0
 create_dataset:
   recipe_dir: ${recipe_dir}
 model:
@@ -168,4 +172,8 @@ dataloader:
     pin_memory: true
     multiprocessing_context: spawn
     persistent_workers: true
+best_model_criterion:
+- - valid/eer
+  - 10
+  - min
 init_param: ???

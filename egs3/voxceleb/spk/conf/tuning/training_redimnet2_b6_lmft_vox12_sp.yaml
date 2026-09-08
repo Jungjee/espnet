@@ -54,7 +54,7 @@ dataset:
           - 15
       rir_apply_prob: 0.5
       rir_scp: ${data_dir}/rirs.scp
-      target_duration: 2.0
+      target_duration: 6.0
     valid:
       spk2utt: ${data_dir}/vox12_dualband_sp/spk2utt
       target_duration: 8.0
@@ -137,27 +137,27 @@ model:
   loss: sphereface2
   loss_conf:
     scale: 32.0
-    margin: 0.0
+    margin: 0.3
     lanbuda: 0.7
     t: 3
     margin_type: C
 optimizer:
   _target_: torch.optim.SGD
-  lr: 0.1
+  lr: 0.0001
   momentum: 0.9
   nesterov: true
   weight_decay: 2.0e-05
 scheduler:
   _target_: espnet3.systems.spk.schedulers.ExponentialDecrease
-  num_epochs: 120
+  num_epochs: 5
   epoch_iter: 1
-  initial_lr: 0.1
-  final_lr: 6.0e-05
-  warm_up_epoch: 6
-  warm_from_zero: true
+  initial_lr: 0.0001
+  final_lr: 2.5e-05
+  warm_up_epoch: 1
+  warm_from_zero: false
   scale_ratio: 1.0
 trainer:
-  max_epochs: 120
+  max_epochs: 5
   check_val_every_n_epoch: 1
   callbacks:
   - _target_: espnet3.systems.spk.callbacks.SpeakerVerificationScoring
@@ -165,14 +165,14 @@ trainer:
     c_miss: 1.0
     c_fa: 1.0
   - _target_: espnet3.systems.spk.callbacks.MarginScheduler
-    initial_margin: 0.0
-    final_margin: 0.2
-    increase_start_epoch: 20
-    fix_start_epoch: 40
+    initial_margin: 0.3
+    final_margin: 0.3
+    increase_start_epoch: 0
+    fix_start_epoch: 1
     increase_type: exp
 dataloader:
   train:
-    batch_size: 140
+    batch_size: 48
     num_workers: 16
     shuffle: true
     drop_last: true
@@ -192,3 +192,4 @@ best_model_criterion:
 - - valid/eer
   - 10
   - min
+init_param: ???

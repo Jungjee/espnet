@@ -4,27 +4,11 @@ dataset:
   - data_src_args:
       split: voxceleb1_wb
   - data_src_args:
-      split: voxceleb1_wb_sp09
-  - data_src_args:
-      split: voxceleb1_wb_sp11
-  - data_src_args:
       split: voxceleb1_nb
-  - data_src_args:
-      split: voxceleb1_nb_sp09
-  - data_src_args:
-      split: voxceleb1_nb_sp11
   - data_src_args:
       split: voxceleb2_wb
   - data_src_args:
-      split: voxceleb2_wb_sp09
-  - data_src_args:
-      split: voxceleb2_wb_sp11
-  - data_src_args:
       split: voxceleb2_nb
-  - data_src_args:
-      split: voxceleb2_nb_sp09
-  - data_src_args:
-      split: voxceleb2_nb_sp11
   valid:
   - data_src_args:
       split: voxceleb1_test

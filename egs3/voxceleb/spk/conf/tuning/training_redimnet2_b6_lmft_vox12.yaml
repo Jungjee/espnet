@@ -1,0 +1,187 @@
+num_device: 4
+dataset:
+  train:
+  - data_src_args:
+      split: voxceleb1_wb
+  - data_src_args:
+      split: voxceleb1_wb_sp09
+  - data_src_args:
+      split: voxceleb1_wb_sp11
+  - data_src_args:
+      split: voxceleb1_nb
+  - data_src_args:
+      split: voxceleb1_nb_sp09
+  - data_src_args:
+      split: voxceleb1_nb_sp11
+  - data_src_args:
+      split: voxceleb2_wb
+  - data_src_args:
+      split: voxceleb2_wb_sp09
+  - data_src_args:
+      split: voxceleb2_wb_sp11
+  - data_src_args:
+      split: voxceleb2_nb
+  - data_src_args:
+      split: voxceleb2_nb_sp09
+  - data_src_args:
+      split: voxceleb2_nb_sp11
+  valid:
+  - data_src_args:
+      split: voxceleb1_test
+      trials: vox1_o
+  preprocessor:
+    spk2utt: ${data_dir}/vox12_dualband_sp/spk2utt
+    noise_apply_prob: 0.5
+    noise_info:
+    - - 1.0
+      - ${data_dir}/musan_speech.scp
+      - - 4
+        - 7
+      - - 13
+        - 20
+    - - 1.0
+      - ${data_dir}/musan_noise.scp
+      - - 1
+        - 1
+      - - 0
+        - 15
+    - - 1.0
+      - ${data_dir}/musan_music.scp
+      - - 1
+        - 1
+      - - 5
+        - 15
+    rir_apply_prob: 0.5
+    rir_scp: ${data_dir}/rirs.scp
+    target_duration: 6.0
+create_dataset:
+  recipe_dir: ${recipe_dir}
+model:
+  spk_num: 21615
+  frontend: null
+  encoder: redimnet2
+  encoder_conf:
+    F: 72
+    C: 64
+    embed_dim: 192
+    out_channels: 224
+    feat_type: tf
+    hop_length: 160
+    block_1d_type: conv+att
+    block_2d_type: basic_resnet
+    return_2d_output: true
+    agg_gnorm: true
+    compress_tconvs: true
+    fm_weigthing_type: NC
+    group_divisor: 1
+    spec_in_channels: 1
+    causal: none
+    spec_params:
+      do_preemph: true
+      norm_signal: true
+      do_spec_aug: false
+    stages_setup:
+    - - - 1
+        - 1
+      - 3
+      - 3
+      - - - 3
+          - 3
+      - 64
+    - - - 2
+        - 1
+      - 4
+      - 2
+      - - - 3
+          - 3
+      - 64
+    - - - 1
+        - 2
+      - 5
+      - 2
+      - - - 3
+          - 3
+      - 48
+    - - - 2
+        - 1
+      - 5
+      - 1
+      - - - 3
+          - 3
+      - 48
+    - - - 1
+        - 2
+      - 4
+      - 0.75
+      - - - 3
+          - 3
+      - 32
+    - - - 2
+        - 1
+      - 3
+      - 0.5
+      - - - 3
+          - 3
+      - 24
+  pooling: astp
+  pooling_conf:
+    bottleneck_dim: 128
+    global_context_att: true
+  projector: rawnet3
+  projector_conf:
+    output_size: 192
+  loss: sphereface2
+  loss_conf:
+    scale: 32.0
+    margin: 0.3
+    lanbuda: 0.7
+    t: 3
+    margin_type: C
+optimizer:
+  _target_: torch.optim.SGD
+  lr: 0.0001
+  momentum: 0.9
+  nesterov: true
+  weight_decay: 2.0e-05
+scheduler:
+  _target_: espnet3.systems.spk.schedulers.ExponentialDecrease
+  num_epochs: 5
+  epoch_iter: 1
+  initial_lr: 0.0001
+  final_lr: 2.5e-05
+  warm_up_epoch: 1
+  warm_from_zero: false
+  scale_ratio: 1.0
+trainer:
+  max_epochs: 5
+  check_val_every_n_epoch: 1
+  callbacks:
+  - _target_: espnet3.systems.spk.callbacks.SpeakerVerificationScoring
+    p_target: 0.05
+    c_miss: 1.0
+    c_fa: 1.0
+  - _target_: espnet3.systems.spk.callbacks.MarginScheduler
+    initial_margin: 0.3
+    final_margin: 0.3
+    increase_start_epoch: 0
+    fix_start_epoch: 0
+    increase_type: exp
+dataloader:
+  train:
+    batch_size: 48
+    num_workers: 16
+    shuffle: true
+    drop_last: true
+    pin_memory: false
+    multiprocessing_context: spawn
+    persistent_workers: true
+    prefetch_factor: 2
+  valid:
+    batch_size: 16
+    num_workers: 4
+    shuffle: false
+    drop_last: false
+    pin_memory: true
+    multiprocessing_context: spawn
+    persistent_workers: true
+init_param: ???

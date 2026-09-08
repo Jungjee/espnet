@@ -164,7 +164,7 @@ trainer:
     initial_margin: 0.3
     final_margin: 0.3
     increase_start_epoch: 0
-    fix_start_epoch: 0
+    fix_start_epoch: 1
     increase_type: exp
 dataloader:
   train:

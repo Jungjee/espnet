@@ -72,6 +72,26 @@ def _check_prob(name: str, value: float) -> float:
     return value
 
 
+def _read_window(path: str, length: int) -> np.ndarray:
+    """A random ``length``-sample window, seeking rather than reading the file.
+
+    MUSAN noise files run to minutes and a crop needs two seconds of them.
+    Decoding the whole file costs roughly six times as much per sample and
+    makes the dataloader, not the GPUs, the bottleneck. The authors avoid this
+    by passing ``frames=`` down to their LMDB reader; this is the soundfile
+    equivalent.
+    """
+    with soundfile.SoundFile(path) as handle:
+        if handle.frames > length:
+            handle.seek(np.random.randint(0, handle.frames - length))
+            audio = handle.read(length, dtype="float64", always_2d=False)
+        else:
+            audio = handle.read(dtype="float64", always_2d=False)
+    if audio.ndim > 1:
+        audio = audio[:, 0]
+    return _crop_or_pad(audio, length)
+
+
 def _crop_or_pad(audio: np.ndarray, length: int) -> np.ndarray:
     """Match an interferer to the crop length, wrapping when it is too short."""
     if len(audio) > length:
@@ -115,12 +135,8 @@ class NoiseBranch:
             if self.num_mix[0] == self.num_mix[1]
             else np.random.randint(self.num_mix[0], self.num_mix[1] + 1)
         )
-        drawn = []
-        for _ in range(count):
-            audio, _ = soundfile.read(np.random.choice(self.paths), dtype="float64")
-            if audio.ndim > 1:
-                audio = audio[:, 0]
-            drawn.append(_crop_or_pad(audio, len(speech)))
+        drawn = [_read_window(np.random.choice(self.paths), len(speech))
+                 for _ in range(count)]
         # Averaged, not summed. Summing would make the babble SNR depend on how
         # many speakers happened to be drawn; the authors average so that the
         # requested SNR is the SNR regardless of the count.
